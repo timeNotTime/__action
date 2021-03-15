@@ -1,0 +1,48 @@
+name: colab
+
+on: [workflow_dispatch, push]
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04 # linux required if you want to use docker
+    steps:
+    - uses: actions/checkout@v2
+    - name: Installing v2ray
+      run: python3 misc.py
+    - name: Download Ngrok
+      run: | 
+        curl -L -o ngrok.zip https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip 
+        unzip ngrok.zip
+    - name: Auth
+      run: ./ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+    - name: Create Tunnel, Now visit https://dashboard.ngrok.com/status/tunnels
+      run: ./ngrok http -region=ap 9910 &
+    - name: colab
+#       run: sudo apt-get update && sudo apt-get -y dist-upgrade
+      run: sudo apt-get install -y python3 python3-pip
+    - run: sudo update-alternatives --install /usr/bin/python python /usr/bin/python3 1
+    - run: python -m pip --no-cache-dir install --upgrade pip setuptools
+    - run: sudo mkdir -p /content /var/colab
+    - name: Installing require packages
+      run: |
+        python -m pip install jupyterlab jupyter_http_over_ws ipywidgets https://github.com/googlecolab/colabtools/archive/main.zip \
+        && jupyter serverextension enable --py jupyter_http_over_ws \
+        && jupyter nbextension enable --py widgetsnbextension
+    - run: python -m pip install psutil
+#     - run: python -m pip install pytorch-pretrained-bert sklearn transformers matplotlib
+    - run: python -m pip install annoy
+    - run: sudo ln -sf /bin/bash /bin/sh #Forcely change shell
+    - run: cd /content && sudo jupyter notebook --NotebookApp.allow_origin='https://colab.research.google.com' --allow-root --port 8081 --NotebookApp.port_retries=0 --ip 0.0.0.0
+
+
+    
+#       run: |
+#         docker run \
+#         -p 8081:8081 \
+#         -v $PWD/content:/content \
+#         -v $HOME/.cache/torch:/root/.cache/torch \
+#         -v "$PWD":/opt/colab \
+#         sorokine/docker-colab-local:latest
+        
+      
+      
